@@ -11,4 +11,6 @@ For example:
 updates
 ```
 
-Navigate to https://discord.com/api/oauth2/authorize?client_id=951744211139575869&permissions=67648&scope=bot and add your bot to your server.
+Go create a discord bot and copy the client ID.
+
+Navigate to https://discord.com/api/oauth2/authorize?client_id=[ CLIENT ID ]&permissions=67648&scope=bot and add your bot to your server. Be sure to swap out your `[ CLIENT ID ]`.
