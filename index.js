@@ -3,6 +3,7 @@ const Twitter = require('twitter-api-v2');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { channel } = require('diagnostics_channel');
 
 // TODO
 // delete tweets
@@ -16,17 +17,15 @@ const twitterApiSecret = twitterkey[1];
 const twitterAccessToken = twitterkey[2];
 const twitterAccessSecret = twitterkey[3];
 
-console.log(twitterkey);
-
 const users = String(fs.readFileSync(path.join(__dirname, 'users.txt'))).replaceAll('\r', '').split('\n');
 const channels = String(fs.readFileSync(path.join(__dirname, 'channels.txt'))).replaceAll('\r', '').split('\n');
 const twitterHashtags = String(fs.readFileSync(path.join(__dirname, 'twitterhashtags.txt'))).replaceAll('\r', '').split('\n');
 const tiktokHashtags = String(fs.readFileSync(path.join(__dirname, 'tiktokhashtags.txt'))).replaceAll('\r', '').split('\n');
 
-const requiredTwitterHashtags = twitterHashtags[0] ?? [];
-const optionalTwitterHashtags = twitterHashtags[1] ?? [];
-const requiredTiktokHashtags = tiktokHashtags[0] ?? [];
-const optionalTiktokHashtags = tiktokHashtags[1] ?? [];
+const requiredTwitterHashtags = twitterHashtags[0] ? twitterHashtags[0].trim().split(' ') : [];
+const optionalTwitterHashtags = twitterHashtags[1] ? twitterHashtags[1].trim().split(' ') : [];
+const requiredTiktokHashtags = tiktokHashtags[0] ? tiktokHashtags[0].trim().split(' ') : [];
+const optionalTiktokHashtags = tiktokHashtags[1] ? tiktokHashtags[1].trim().split(' ') : [];
 
 const discordClient = new Discord.Client({intents: [Discord.Intents.FLAGS.GUILDS, Discord.Intents.FLAGS.GUILD_MESSAGES, Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
 
@@ -56,7 +55,7 @@ discordClient.on('messageCreate', message => {
         return;
     }
 
-    const text = message.content.replaceAll(/<[@#!0-9a-zA-Z]+>/gi, '').trim();
+    const text = message.content.replaceAll(/ <[@#!0-9a-zA-Z]+> /gi, ' ').replaceAll(/<[@#!0-9a-zA-Z]+>/gi, '').trim();
 
     const hasAttachment = message.attachments.size > 0;
     const videoAttachments = [];
@@ -94,7 +93,7 @@ discordClient.on('messageCreate', message => {
         return;
     }
 
-    postToSocialMedia(text, imageAttachments, videoAttachments);
+    postToSocialMedia(channel, text, imageAttachments, videoAttachments);
 });
 
 discordClient.login(discordkey);
@@ -105,12 +104,8 @@ const twitterKeys = {
     accessToken: twitterAccessToken,
     accessSecret: twitterAccessSecret,
 };
-// const twitterKeys = {
-//     clientId: twitterApiKey,
-//     clientSecret: twitterApiSecret,
-// };
+
 const twitterClient = new Twitter.TwitterApi(twitterKeys).readWrite;
-Twitter.TwitterApiV2Settings.debug = true;
 
 const generateTwitterHashtags = () => {
     const selectedTags = [];
@@ -200,36 +195,99 @@ const isValidDiscordUser = (username, discriminator) => {
     return false;
 };
 
-const postToSocialMedia = (text, imageList, videoList) => {
+const postToSocialMedia = (channel, text, imageList, videoList) => {
     console.log('Posting to social media... ', text);
 
     if (imageList.length > 0) {
-        postToTwitterImage(text, imageList);
+        postToTwitterImage(channel, text, imageList);
+    } else if (videoList.length > 0) {
+        postToTwitterVideo(channel, text, videoList);
+    } else {
+        postToTwitterText(channel, text);
     }
-    
-    if (videoList.length > 0) {
+};
 
+const postToTwitterText = async (channel, text) => {
+    try {
+        const hashtags = getHashtags(text) || generateTwitterHashtags();
+        const finalText = getText(text, hashtags);
+
+        const tweet = await twitterClient.v2.tweet(finalText);
+
+        try {
+            const me = await twitterClient.v2.me();
+            channel.send('Posted tweet.\n' + 'https://twitter.com/' + me.data.id + '/status/' + tweet.data.id);
+        } catch (error) {
+            const detail = error?.data?.detail || error;
+            channel.send('Failed to post tweet link.\n' + detail);
+            console.error('Failed to post tweet link. ', detail);
+        }
+        // channel.send('Posted tweet.\n' + tweeted.data.text);
+    } catch (error) {
+        const detail = error?.data?.detail || error;
+        channel.send('Failed to post tweet.\n' + detail);
+        console.error('Failed to tweet. ', detail);
     }
 };
 
-const postToTwitterText = (text) => {
+const postToTwitterImage = async (channel, text, imageList) => {
+    try {
+        const twitterImages = await Promise.all(imageList.map(url => getTwitterMediaFromURL(url)));
+        const hashtags = getHashtags(text) || generateTwitterHashtags();
+        const finalText = getText(text, hashtags);
 
+        const tweet = await twitterClient.v2.tweet(finalText, {
+            media: {
+                media_ids: twitterImages,
+            },
+        });
+
+        try {
+            const me = await twitterClient.v2.me();
+            channel.send('Posted tweet.\n' + 'https://twitter.com/' + me.data.id + '/status/' + tweet.data.id);
+        } catch (error) {
+            const detail = error?.data?.detail || error;
+            channel.send('Failed to post tweet link.\n' + detail);
+            console.error('Failed to post tweet link. ', detail);
+        }
+    } catch (error) {
+        const detail = error?.data?.detail || error;
+        channel.send('Failed to post tweet.\n' + detail);
+        console.error('Failed to tweet images. ', detail);
+    }
 };
 
-const postToTwitterImage = async (text, imageList) => {
-    const twitterImages = [await twitterClient.v1.uploadMedia('./unknown.png')];
-    // const twitterImages = await Promise.all(imageList.map(url => getTwitterMediaFromURL(url)));
-    const hashtags = generateTwitterHashtags();
+const postToTwitterVideo = async (channel, text, videoList) => {
+    try {
+        const twitterVideo = await getTwitterMediaFromURL(videoList[0]);
+        const hashtags = getHashtags(text) || generateTwitterHashtags();
+        const finalText = getText(text, hashtags);
 
-    console.log('Posting twitter image link.');
-    console.log(text);
-    console.log(hashtags);
-    console.log(twitterImages);
-    // twitterClient.v2.tweet(text, {});
-};
+        const tweet = await twitterClient.v2.tweet(finalText, {
+            media: {
+                media_ids: [twitterVideo],
+            },
+        });
 
-const postToTwitterVideo = (text, videoList) => {
-
+        try {
+            const me = await twitterClient.v2.me();
+            channel.send('Posted tweet.\n' + 'https://twitter.com/' + me.data.id + '/status/' + tweet.data.id);
+        } catch (error) {
+            const detail = error?.data?.detail || error;
+            channel.send('Failed to post tweet link.\n' + detail);
+            console.error('Failed to post tweet link. ', detail);
+        }
+    } catch (error) {
+        if (error.code === 400) {
+            const detail = error?.data?.detail || error;
+            channel.send('Failed to post tweet.\n' + detail + '\nhttps://help.twitter.com/en/using-twitter/twitter-videos');
+            console.error('Failed to tweet videos. ', detail);
+        } else {
+            const detail = error?.data?.detail || error;
+            channel.send('Failed to post tweet.\n' + detail);
+            console.error('Failed to tweet videos. ', detail);
+        }
+    }
 };
 
 const getTwitterMediaFromURL = async (url) => {
@@ -238,9 +296,16 @@ const getTwitterMediaFromURL = async (url) => {
         return;
     }
 
-    console.log('buffer ', buffer);
+    // console.log('buffer ', buffer.toString('base64'));
+
+    try {
+        return await twitterClient.v1.uploadMedia(buffer, {mimeType: getMimeTypeFromURL(url)});
+    } catch (error) {
+        console.error('Could not upload media. ', error);
+        return null;
+    }
     
-    return await twitterClient.v1.uploadMedia(buffer, {mimeType: getMimeTypeFromURL(url)});
+    // return await twitterClient.v1.uploadMedia(buffer, {mimeType: getMediaTypeFromURL(url)});
 };
 
 const getBufferFromURL = async (url) => {
@@ -283,4 +348,31 @@ const getMimeTypeFromURL = (url) => {
     }
 
     return null;
+};
+
+const getText = (text, hashtags) => {
+    const results = text.match(/(#[a-zA-Z0-9_]*[ ]*)+$/gi);
+    if (results) {
+        text = text.replaceAll(results[0], '');
+    }
+
+    return text.trim() + '\n' + hashtags.join(' ');
+};
+
+const getHashtags = (text) => {
+    if (text.endsWith('$')) {
+        return [];
+    }
+
+    const results = text.match(/(#[a-zA-Z0-9_]*[ ]*)+$/gi);
+    const individual = results ? results[0].split(' ') : null;
+    if (individual) {
+        for (let i = individual.length - 1; i >= 0; i--) {
+            if (individual[i] === '#') {
+                individual.splice(i, 1);
+            }
+        }
+    }
+
+    return individual;
 };

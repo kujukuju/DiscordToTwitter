@@ -14,6 +14,10 @@ access secret
 You must apply for elevated twitter API access in order to upload media.
 https://developer.twitter.com/en/portal/products/elevated
 
+You must also approve read and write settings in the `User authentication settings` page.
+
+Be sure your access token says `Created with Read and Write permissions`. If it doesn't you need to regenerate your access token.
+
 Edit `users.txt` to add the users you want to be able to post twitter content.
 
 Create `channels.txt` in the root folder of the project.
@@ -42,7 +46,11 @@ For example:
 #pixelart
 ```
 
-You can also add hashtags to posts by putting them at the end of your message.
+---
+
+If you put hashtags at the end of your message it will override the defaults.
+
+If you don't want hashtags just put `$` at the end of your message it will remove all hashtags.
 
 ---
 
