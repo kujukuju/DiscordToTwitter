@@ -48,6 +48,12 @@ For example:
 
 ---
 
+Update indiedevhourreposts.txt to be however many reposts you want during that time. Optionally 0.
+
+Update screenshotsaturdayreposts.txt to be however many reposts you want during that time. Optionally 0.
+
+---
+
 If you put hashtags at the end of your message it will override the defaults.
 
 If you don't want hashtags just put `$` at the end of your message it will remove all hashtags.

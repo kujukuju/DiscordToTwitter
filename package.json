@@ -2,11 +2,10 @@
   "name": "DiscordToTwitter",
   "version": "1.0.0",
   "main": "index.js",
-  "author": "Trent <trentwdb@gmail.com>",
+  "author": "Kuju <kuju@veraegames.com>",
   "license": "MIT",
   "dependencies": {
     "discord.js": "^13.6.0",
-    "twitter-api-client": "^1.5.2",
     "twitter-api-v2": "^1.11.0"
   },
   "scripts": {

@@ -3,7 +3,6 @@ const Twitter = require('twitter-api-v2');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const { channel } = require('diagnostics_channel');
 
 // TODO
 // delete tweets
@@ -202,7 +201,14 @@ const postToSocialMedia = (channel, text, imageList, videoList) => {
         postToTwitterImage(channel, text, imageList);
     } else if (videoList.length > 0) {
         postToTwitterVideo(channel, text, videoList);
+        postToTiktokVideo(channel, text, videoList);
     } else {
+
+
+        // TODO
+        postToTiktokVideo(channel, text, videoList);
+
+
         postToTwitterText(channel, text);
     }
 };
@@ -375,4 +381,8 @@ const getHashtags = (text) => {
     }
 
     return individual;
+};
+
+const postToTiktokVideo = async (channel, text, videoList) => {
+
 };
