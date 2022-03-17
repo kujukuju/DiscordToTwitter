@@ -56,11 +56,16 @@ discordClient.on('messageCreate', message => {
         return;
     }
 
-    const text = message.content.replaceAll(/ <[@#!0-9a-zA-Z]+> /gi, ' ').replaceAll(/<[@#!0-9a-zA-Z]+>/gi, '').trim();
+    const text = message.content.replaceAll(/ <[@#!0-9a-zA-Z]+> /gi, ' ').replaceAll(/<[@#!0-9a-zA-Z]+> /gi, '').replaceAll(/ <[@#!0-9a-zA-Z]+>/gi, '').replaceAll(/<[@#!0-9a-zA-Z]+>/gi, '').trim();
 
     const hasAttachment = message.attachments.size > 0;
     const videoAttachments = [];
     const imageAttachments = [];
+
+    if (!text && !hasAttachment) {
+        channel.send('Empty message. Not posting.');
+        return;
+    }
 
     message.attachments.forEach(attachment => {
         const url = attachment.attachment;
