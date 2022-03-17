@@ -9,6 +9,8 @@ const https = require('https');
 // if you reply to a message it replies to the tweet and creates a thread or however that works
 // maybe twitter long video if video is detected to be over 120 seconds but I dont think I care
 
+const messageMap = {};
+
 const discordkey = String(fs.readFileSync(path.join(__dirname, 'discordkey.txt')));
 const twitterkey = String(fs.readFileSync(path.join(__dirname, 'twitterkey.txt'))).replaceAll('\r', '').split('\n');
 const twitterApiKey = twitterkey[0];
@@ -105,6 +107,10 @@ const twitterKeys = {
 };
 
 const twitterClient = new Twitter.TwitterApi(twitterKeys).readWrite;
+
+const getPostInformationFromMessage = (message) => {
+
+};
 
 const generateTwitterHashtags = () => {
     const selectedTags = [];
